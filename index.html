@@ -1,0 +1,620 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Stars</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ff6b6b, #ffa500, #ffeb3b);
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+            margin-bottom: 10px;
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            text-align: center;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4/3;
+        }
+
+        #gameCanvas {
+            border: 3px solid #e74c3c;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #87ceeb, #98fb98);
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.4);
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #gameInfo {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+            font-weight: bold;
+        }
+
+        #instructions {
+            color: #2c3e50;
+            text-align: center;
+            margin-top: 10px;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            font-weight: bold;
+            padding: 0 10px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            min-height: 44px;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background: #c0392b;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Mobile controls */
+        #mobileControls {
+            display: none;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 15px;
+            gap: 20px;
+        }
+
+        .controlBtn {
+            background: rgba(231, 76, 60, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controlBtn:active {
+            background: rgba(192, 57, 43, 0.9);
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+            }
+            
+            #instructions {
+                margin-bottom: 10px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 5px;
+            }
+            
+            #gameInfo {
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+            
+            #instructions {
+                font-size: 0.8rem;
+                margin-top: 5px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 5px;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+                margin-bottom: 3px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Catch the Falling Stars ⭐</h1>
+    
+    <div id="gameInfo">
+        <div>Score: <span id="score">0</span></div>
+        <div>Time: <span id="timer">60</span>s</div>
+        <div>High Score: <span id="highScore">0</span></div>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p id="newHighScore" style="display: none; color: #e74c3c;">🎉 New High Score! 🎉</p>
+            <button onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <span id="desktopInstructions">Use ← → arrow keys to move the basket and catch falling stars!</span>
+        <span id="mobileInstructions" style="display: none;">Tap the left and right buttons to move your basket!</span>
+    </div>
+
+    <div id="mobileControls">
+        <button class="controlBtn" id="leftBtn">←</button>
+        <button class="controlBtn" id="rightBtn">→</button>
+    </div>
+
+    <script>
+        // Game state variables
+        let canvas, ctx;
+        let gameRunning = false;
+        let score = 0;
+        let timeLeft = 60;
+        let highScore = 0;
+        let stars = [];
+        let basket = { x: 0, y: 0, width: 0, height: 0 };
+        let starSpeed = 2;
+        let lastSpeedIncrease = 0;
+        let canvasWidth = 800;
+        let canvasHeight = 600;
+        let scale = 1;
+        
+        // Input handling
+        const keys = { left: false, right: false };
+        let isMobile = false;
+
+        // Initialize the game
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Detect mobile devices
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                      window.innerWidth <= 768;
+            
+            // Update UI for mobile
+            updateMobileUI();
+            
+            // Set up canvas and responsive sizing
+            setupCanvas();
+            
+            // Load high score from memory
+            highScore = 0;
+            updateDisplay();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Handle window resize
+            window.addEventListener('resize', handleResize);
+            
+            startGame();
+        }
+
+        // Setup canvas with proper scaling
+        function setupCanvas() {
+            const container = document.getElementById('gameContainer');
+            const rect = container.getBoundingClientRect();
+            
+            // Set canvas resolution
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            // Calculate scale for responsive design
+            scale = Math.min(rect.width / canvasWidth, rect.height / canvasHeight);
+            
+            // Initialize basket position and size
+            resetBasket();
+            
+            // Disable image smoothing for pixel-perfect rendering
+            ctx.imageSmoothingEnabled = false;
+        }
+
+        // Reset basket to initial position
+        function resetBasket() {
+            basket.width = Math.max(60, canvasWidth * 0.12);
+            basket.height = Math.max(20, canvasHeight * 0.05);
+            basket.x = (canvasWidth - basket.width) / 2;
+            basket.y = canvasHeight - basket.height - 30;
+        }
+
+        // Update mobile UI elements
+        function updateMobileUI() {
+            const mobileControls = document.getElementById('mobileControls');
+            const desktopInstructions = document.getElementById('desktopInstructions');
+            const mobileInstructions = document.getElementById('mobileInstructions');
+            
+            if (isMobile || window.innerWidth <= 768) {
+                mobileControls.style.display = 'flex';
+                desktopInstructions.style.display = 'none';
+                mobileInstructions.style.display = 'inline';
+            } else {
+                mobileControls.style.display = 'none';
+                desktopInstructions.style.display = 'inline';
+                mobileInstructions.style.display = 'none';
+            }
+        }
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Keyboard events
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Mobile touch events
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            
+            // Touch events for mobile buttons
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.left = true;
+            });
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.left = false;
+            });
+            leftBtn.addEventListener('mousedown', () => keys.left = true);
+            leftBtn.addEventListener('mouseup', () => keys.left = false);
+            leftBtn.addEventListener('mouseleave', () => keys.left = false);
+            
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys.right = true;
+            });
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys.right = false;
+            });
+            rightBtn.addEventListener('mousedown', () => keys.right = true);
+            rightBtn.addEventListener('mouseup', () => keys.right = false);
+            rightBtn.addEventListener('mouseleave', () => keys.right = false);
+            
+            // Prevent default touch behaviors
+            document.addEventListener('touchstart', (e) => {
+                if (e.target.classList.contains('controlBtn')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            document.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Handle window resize
+        function handleResize() {
+            setupCanvas();
+            updateMobileUI();
+        }
+
+        // Handle keyboard input
+        function handleKeyDown(e) {
+            if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                keys.left = true;
+            }
+            if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                keys.right = true;
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                keys.left = false;
+            }
+            if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                keys.right = false;
+            }
+        }
+
+        // Start or restart the game
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            timeLeft = 60;
+            stars = [];
+            resetBasket();
+            starSpeed = 2;
+            lastSpeedIncrease = 0;
+            
+            document.getElementById('gameOver').style.display = 'none';
+            updateDisplay();
+            gameLoop();
+            startTimer();
+        }
+
+        // Main game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update game logic
+        function update() {
+            // Calculate movement speed based on canvas size
+            const moveSpeed = canvasWidth * 0.015;
+            
+            // Move basket based on input
+            if (keys.left && basket.x > 0) {
+                basket.x -= moveSpeed;
+            }
+            if (keys.right && basket.x < canvasWidth - basket.width) {
+                basket.x += moveSpeed;
+            }
+            
+            // Spawn new stars
+            if (Math.random() < 0.02) {
+                spawnStar();
+            }
+            
+            // Update stars
+            updateStars();
+            
+            // Check difficulty increase
+            checkDifficultyIncrease();
+        }
+
+        // Spawn a new star
+        function spawnStar() {
+            const starSize = Math.max(12, canvasWidth * 0.025);
+            const star = {
+                x: Math.random() * (canvasWidth - starSize * 2) + starSize,
+                y: -starSize,
+                size: starSize,
+                speed: starSpeed + Math.random() * 2
+            };
+            stars.push(star);
+        }
+
+        // Update all stars and check collisions
+        function updateStars() {
+            for (let i = stars.length - 1; i >= 0; i--) {
+                const star = stars[i];
+                star.y += star.speed;
+                
+                // Check collision with basket
+                if (star.y + star.size > basket.y &&
+                    star.y < basket.y + basket.height &&
+                    star.x + star.size > basket.x &&
+                    star.x < basket.x + basket.width) {
+                    
+                    // Star caught!
+                    score++;
+                    stars.splice(i, 1);
+                    updateDisplay();
+                } else if (star.y > canvasHeight) {
+                    // Star missed
+                    stars.splice(i, 1);
+                }
+            }
+        }
+
+        // Increase difficulty over time
+        function checkDifficultyIncrease() {
+            const elapsed = 60 - timeLeft;
+            if (elapsed >= lastSpeedIncrease + 15 && elapsed > 0) {
+                starSpeed += 1;
+                lastSpeedIncrease = elapsed;
+            }
+        }
+
+        // Render all game objects
+        function render() {
+            // Clear canvas with daylight gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+            gradient.addColorStop(0, '#87ceeb');
+            gradient.addColorStop(0.7, '#98fb98');
+            gradient.addColorStop(1, '#90ee90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw clouds
+            drawClouds();
+            
+            // Draw stars
+            stars.forEach(star => drawStar(star));
+            
+            // Draw basket
+            drawBasket();
+        }
+
+        // Draw fluffy clouds
+        function drawClouds() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            
+            const cloudScale = canvasWidth / 800;
+            drawCloud(150 * cloudScale, 80 * cloudScale, 60 * cloudScale);
+            drawCloud(450 * cloudScale, 120 * cloudScale, 45 * cloudScale);
+            drawCloud(650 * cloudScale, 60 * cloudScale, 50 * cloudScale);
+        }
+
+        // Draw individual cloud
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.3, y, size * 0.7, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.6, y, size * 0.5, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.2, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+            ctx.arc(x + size * 0.4, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw a star
+        function drawStar(star) {
+            const centerX = star.x + star.size / 2;
+            const centerY = star.y + star.size / 2;
+            const outerRadius = star.size;
+            const innerRadius = star.size * 0.4;
+            
+            ctx.fillStyle = '#ff69b4';
+            ctx.strokeStyle = '#ff1493';
+            ctx.lineWidth = Math.max(1, star.size * 0.1);
+            ctx.beginPath();
+            
+            // Create five-pointed star
+            for (let i = 0; i < 10; i++) {
+                const angle = (i * Math.PI) / 5;
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const x = centerX + Math.cos(angle - Math.PI / 2) * radius;
+                const y = centerY + Math.sin(angle - Math.PI / 2) * radius;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Draw the basket
+        function drawBasket() {
+            // Basket body
+            ctx.fillStyle = '#deb887';
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+            
+            // Basket rim
+            ctx.fillStyle = '#d2691e';
+            ctx.fillRect(basket.x, basket.y, basket.width, Math.max(3, basket.height * 0.2));
+            
+            // Basket weave pattern
+            ctx.strokeStyle = '#a0522d';
+            ctx.lineWidth = Math.max(1, basket.width * 0.02);
+            ctx.beginPath();
+            
+            // Vertical lines
+            const verticalLines = Math.floor(basket.width / 12);
+            for (let i = 0; i < verticalLines; i++) {
+                const x = basket.x + (i + 1) * (basket.width / (verticalLines + 1));
+                ctx.moveTo(x, basket.y + basket.height * 0.2);
+                ctx.lineTo(x, basket.y + basket.height - basket.height * 0.1);
+            }
+            
+            // Horizontal lines
+            const horizontalLines = Math.floor(basket.height / 10);
+            for (let i = 0; i < horizontalLines; i++) {
+                const y = basket.y + basket.height * 0.3 + (i * basket.height * 0.2);
+                ctx.moveTo(basket.x + basket.width * 0.1, y);
+                ctx.lineTo(basket.x + basket.width * 0.9, y);
+            }
+            ctx.stroke();
+        }
+
+        // Update display elements
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('timer').textContent = timeLeft;
+            document.getElementById('highScore').textContent = highScore;
+        }
+
+        // Start game timer
+        function startTimer() {
+            const timer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // End the game
+        function endGame() {
+            gameRunning = false;
+            
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                document.getElementById('newHighScore').style.display = 'block';
+            } else {
+                document.getElementById('newHighScore').style.display = 'none';
+            }
+            
+            // Show game over screen
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+            updateDisplay();
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
